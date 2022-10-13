@@ -1,0 +1,114 @@
+
+syntax = "proto3";
+
+option go_package = "github.com/xoplog/xop-go/xopproto";
+
+message SourceIdentity {
+	string sourceID = 1;
+	int64 sourceStartTime = 2;
+	bytes sourceRandom = 3;
+}
+
+message FragmentInStream {
+	fixed64 streamID = 1;
+	IngestFragmentBody fragment = 2;
+}
+
+message FragmentAck {
+	fixed64 sequenceNumber = 1;
+	Error error = 2;
+}
+
+message IngestFragment {
+	SourceIdentity source = 1;
+	IngestFragmentBody fragment = 2;
+}
+
+message IngestFragmentBody {
+	fixed64 sequenceNumber = 4;
+	repeated bytes traceIDs = 5;
+	int64 receivedAt = 6;
+	repeated AttributeDefinitions = 7;
+	repeated EnumDefinition = 8;
+	repeated Span spans = 9;
+	repeated Lines lines = 10;
+	repeated AttributesReferenced = 11;
+}
+
+message FragmentAck {
+	string sourceID = 1;
+	int64 sourceStartTime = 2;
+	
+
+message AttributeDefinition {
+	string key = 1;
+	string description = 2;
+	string namespace = 3;
+	string namespaceSemver = 4;
+	AttributeType type = 5;
+	optional boolean shouldIndex = 5;
+	optional float64 prominance = 7;
+	bool locked = 8;
+	bool distinct = 9;
+	bool repeated = 10;
+}
+
+enum AttributeType {
+	String = 0;
+	Int64 = 1;
+	// XXX
+}
+
+message EnumDefinition {
+	string attributeKey = 1;
+	string namespace = 2;
+	string namespaceSemver = 3;
+	string string = 4;
+	int64 intValue = 5;
+}
+
+message AttributesReferenced {
+	bytes TraceID = 1;
+	string attributeKey = 2;
+	string namespace = 3;
+	string namespaceSemver = 4;
+}
+
+message Lines {
+	bytes traceID = 1;
+	bytes requestID = 2;
+	int priorLinesInRequest = 3;
+	repeated Line lines = 4;
+}
+
+message Line {
+	bytes spanID = 1;
+	int logLevel = 2;
+	fixed64 timestamp = 3;
+	bytes jsonData = 4; 
+}
+
+message Span {
+	bytes TraceID = 1;
+	bytes RequestID = 2;
+	bytes SpanID = 3;
+	bytes ParentID = 4;
+	bytes jsonData = 5;
+	fixed64 startTime = 6;
+	fixed64 endTime = 7;
+	optional bytes baggage = 8;
+	optional bytes traceState = 9;
+	int errorCount = 10;
+	int alertCount = 11;
+	bool isRequest = 12;
+}
+
+message Error {
+	string text = 1;
+}
+
+service Ingest {
+	rpc UploadFragment(IngestFragment) returns (Error) {}
+	rpc PrepareToStream(SourceIdentity) returns (fixed64) {}
+	rpc Stream(stream FragmentInStream) returns (stream FragmentAck) {}
+}
