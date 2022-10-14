@@ -25,14 +25,14 @@ message IngestFragment {
 }
 
 message IngestFragmentBody {
-	fixed64 sequenceNumber = 4;
-	repeated bytes traceIDs = 5;
-	int64 receivedAt = 6;
-	repeated AttributeDefinitions = 7;
-	repeated EnumDefinition = 8;
-	repeated Span spans = 9;
-	repeated Lines lines = 10;
-	repeated AttributesReferenced = 11;
+	fixed64 sequenceNumber = 1;
+	repeated bytes traceIDs = 2;
+	int64 receivedAt = 3;
+	repeated AttributeDefinitions attributeDefinitions = 4;
+	repeated EnumDefinition enumDefinitions = 5;
+	repeated Span spans = 6;
+	repeated Lines lines = 7;
+	repeated AttributesReferenced attributesReferenced = 8;
 }
 
 message FragmentAck {
@@ -107,8 +107,10 @@ message Error {
 	string text = 1;
 }
 
+/*
 service Ingest {
 	rpc UploadFragment(IngestFragment) returns (Error) {}
 	rpc PrepareToStream(SourceIdentity) returns (fixed64) {}
 	rpc Stream(stream FragmentInStream) returns (stream FragmentAck) {}
 }
+*/
