@@ -28,17 +28,12 @@ message IngestFragmentBody {
 	fixed64 sequenceNumber = 1;
 	repeated bytes traceIDs = 2;
 	int64 receivedAt = 3;
-	repeated AttributeDefinitions attributeDefinitions = 4;
+	repeated AttributeDefinition attributeDefinitions = 4;
 	repeated EnumDefinition enumDefinitions = 5;
 	repeated Span spans = 6;
 	repeated Lines lines = 7;
 	repeated AttributesReferenced attributesReferenced = 8;
 }
-
-message FragmentAck {
-	string sourceID = 1;
-	int64 sourceStartTime = 2;
-	
 
 message AttributeDefinition {
 	string key = 1;
@@ -46,8 +41,8 @@ message AttributeDefinition {
 	string namespace = 3;
 	string namespaceSemver = 4;
 	AttributeType type = 5;
-	optional boolean shouldIndex = 5;
-	optional float64 prominance = 7;
+	optional bool shouldIndex = 6;
+	optional double prominance = 7;
 	bool locked = 8;
 	bool distinct = 9;
 	bool repeated = 10;
@@ -77,13 +72,13 @@ message AttributesReferenced {
 message Lines {
 	bytes traceID = 1;
 	bytes requestID = 2;
-	int priorLinesInRequest = 3;
+	int32 priorLinesInRequest = 3;
 	repeated Line lines = 4;
 }
 
 message Line {
 	bytes spanID = 1;
-	int logLevel = 2;
+	int32 logLevel = 2;
 	fixed64 timestamp = 3;
 	bytes jsonData = 4; 
 }
@@ -98,8 +93,8 @@ message Span {
 	fixed64 endTime = 7;
 	optional bytes baggage = 8;
 	optional bytes traceState = 9;
-	int errorCount = 10;
-	int alertCount = 11;
+	int32 errorCount = 10;
+	int32 alertCount = 11;
 	bool isRequest = 12;
 }
 
