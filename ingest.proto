@@ -7,16 +7,7 @@ message SourceIdentity {
 	string sourceID = 1;
 	int64 sourceStartTime = 2;
 	bytes sourceRandom = 3;
-}
-
-message FragmentInStream {
-	fixed64 streamID = 1;
-	IngestFragmentBody fragment = 2;
-}
-
-message FragmentAck {
-	fixed64 sequenceNumber = 1;
-	Error error = 2;
+	bool canThrottle = 4; // true for aggregators that have local storage
 }
 
 message IngestFragment {
@@ -26,13 +17,45 @@ message IngestFragment {
 
 message IngestFragmentBody {
 	fixed64 sequenceNumber = 1;
-	repeated bytes traceIDs = 2;
+	repeated Trace traces = 2;
 	int64 receivedAt = 3;
 	repeated AttributeDefinition attributeDefinitions = 4;
 	repeated EnumDefinition enumDefinitions = 5;
-	repeated Span spans = 6;
-	repeated Lines lines = 7;
-	repeated AttributesReferenced attributesReferenced = 8;
+	repeated AttributesReferenced attributesReferenced = 6;
+}
+
+message Trace {
+	bytes TraceID = 1;
+	repeated Request requests = 2;
+}
+
+message Request {
+	bytes requestID = 1;
+	optional bytes parentTraceID = 2;
+	bytes parentSpanID = 3;
+	int32 priorLinesInRequest = 4;
+	repeated Span spans = 5; 
+	repeated Line lines = 6; // not included in spans because we want to preserve the exact ordering
+	int32 errorCount = 7;
+	int32 alertCount = 8;
+}
+
+message Line {
+	bytes spanID = 1;
+	int32 logLevel = 2;
+	sfixed64 timestamp = 3;
+	bytes jsonData = 4; 
+}
+
+message Span {
+	bytes SpanID = 3;
+	bytes ParentID = 4;
+	bytes jsonData = 5;
+	sfixed64 startTime = 6;
+	optional sfixed64 endTime = 7;
+	optional bytes baggage = 8; // only populated if isRequest is true and there is data
+	optional bytes traceState = 9; // only populated if isRequest is true and there is data
+	bool isRequest = 12;
 }
 
 message AttributeDefinition {
@@ -41,17 +64,30 @@ message AttributeDefinition {
 	string namespace = 3;
 	string namespaceSemver = 4;
 	AttributeType type = 5;
-	optional bool shouldIndex = 6;
-	optional double prominance = 7;
+	bool shouldIndex = 6;
+	int32 prominance = 7;
 	bool locked = 8;
 	bool distinct = 9;
-	bool repeated = 10;
+	bool multiple = 10;
 }
 
+// comes from ZZZAttribute
 enum AttributeType {
-	String = 0;
-	Int64 = 1;
-	// XXX
+	Unknown = 0;
+	Bool = 1;
+	Float64 = 2;
+	Float32 = 3;
+	Int64 = 4;
+	Int32 = 5;
+	Int16 = 6;
+	Int8 = 7;
+	Int = 8;
+	String = 9;
+	Link = 10;
+	Any = 11;
+	Time = 12;
+	Duration = 13;
+	Enum = 14;
 }
 
 message EnumDefinition {
@@ -69,43 +105,17 @@ message AttributesReferenced {
 	string namespaceSemver = 4;
 }
 
-message Lines {
-	bytes traceID = 1;
-	bytes requestID = 2;
-	int32 priorLinesInRequest = 3;
-	repeated Line lines = 4;
-}
-
-message Line {
-	bytes spanID = 1;
-	int32 logLevel = 2;
-	fixed64 timestamp = 3;
-	bytes jsonData = 4; 
-}
-
-message Span {
-	bytes TraceID = 1;
-	bytes RequestID = 2;
-	bytes SpanID = 3;
-	bytes ParentID = 4;
-	bytes jsonData = 5;
-	fixed64 startTime = 6;
-	fixed64 endTime = 7;
-	optional bytes baggage = 8;
-	optional bytes traceState = 9;
-	int32 errorCount = 10;
-	int32 alertCount = 11;
-	bool isRequest = 12;
-}
-
 message Error {
 	string text = 1;
 }
 
-/*
-service Ingest {
-	rpc UploadFragment(IngestFragment) returns (Error) {}
-	rpc PrepareToStream(SourceIdentity) returns (fixed64) {}
-	rpc Stream(stream FragmentInStream) returns (stream FragmentAck) {}
+message ReadyToStream {
+	fixed64 streamID = 1;
 }
-*/
+
+message Empty {}
+
+service Ingest {
+	rpc Ping(Empty) returns (Empty) {}
+	rpc UploadFragment(IngestFragment) returns (Error) {}
+}
