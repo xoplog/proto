@@ -12,16 +12,12 @@ message SourceIdentity {
 
 message IngestFragment {
 	SourceIdentity source = 1;
-	IngestFragmentBody fragment = 2;
-}
-
-message IngestFragmentBody {
-	fixed64 sequenceNumber = 1;
-	repeated Trace traces = 2;
-	int64 receivedAt = 3;
-	repeated AttributeDefinition attributeDefinitions = 4;
-	repeated EnumDefinition enumDefinitions = 5;
-	repeated AttributesReferenced attributesReferenced = 6;
+	fixed64 sequenceNumber = 2;
+	repeated Trace traces = 3;
+	int64 receivedAt = 4;
+	repeated AttributeDefinition attributeDefinitions = 5;
+	repeated EnumDefinition enumDefinitions = 6;
+	repeated AttributesReferenced attributesReferenced = 7;
 }
 
 message Trace {
@@ -55,7 +51,8 @@ message Span {
 	optional sfixed64 endTime = 7;
 	optional bytes baggage = 8; // only populated if isRequest is true and there is data
 	optional bytes traceState = 9; // only populated if isRequest is true and there is data
-	bool isRequest = 12;
+	int32 version = 10;
+	bool isRequest = 11;
 }
 
 message AttributeDefinition {
