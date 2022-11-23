@@ -62,7 +62,7 @@ message AttributeDefinition {
 	string namespaceSemver = 4;
 	AttributeType type = 5;
 	bool shouldIndex = 6;
-	int32 prominance = 7;
+	int32 prominence = 7;
 	bool locked = 8;
 	bool distinct = 9;
 	bool multiple = 10;
