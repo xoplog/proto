@@ -107,13 +107,6 @@ message EnumDefinition {
 	int64 intValue = 5;
 }
 
-message AttributeReferenced {
-	bytes TraceID = 1;
-	string attributeKey = 2;
-	string namespace = 3;
-	string namespaceSemver = 4;
-}
-
 message Error {
 	string text = 1;
 }
