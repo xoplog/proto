@@ -24,7 +24,7 @@ message IngestFragment {
 	Source source = 1;
 	Encoding encoding = 2;
 	uint32 endodingVersion = 3;
-	fixed64 sequenceNumber = 4;
+	uint32 sequenceNumber = 4;
 	repeated Trace traces = 5;
 	int64 receivedAt = 6;
 	repeated AttributeDefinition attributeDefinitions = 7;
