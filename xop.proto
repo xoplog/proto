@@ -1,39 +1,7 @@
-
 syntax = "proto3";
 
 option go_package = "github.com/xoplog/xop-go/xopproto";
 
-// Within a sourceNamespace+sourceVersion, all attributes of the same name
-// must have the same defintions.
-
-message Source {
-	string sourceNamespace = 1;
-	string sourceNamespaceVersion = 2;
-	string sourceID = 3;
-	int64 sourceStartTime = 4;
-	bytes sourceRandom = 5;
-	bool canThrottle = 6; // true for aggregators that have local storage
-	int32 protoVersion = 7;
-}
-
-enum Encoding {
-	UnknownEncoding = 0;
-	JSONInProto = 1;
-	Proto = 2;
-}
-
-message IngestFragment {
-	Source source = 1;
-	Encoding encoding = 2;
-	uint32 endodingVersion = 3;
-	uint32 sequenceNumber = 4;
-	repeated Trace traces = 5;
-	int64 receivedAt = 6;
-	repeated AttributeDefinition attributeDefinitions = 7;
-	repeated EnumDefinition enumDefinitions = 8;
-}
-
-/* 
 message Trace {
 	bytes TraceID = 1;
 	repeated Request requests = 2;
@@ -56,19 +24,42 @@ message Line {
 	bytes spanID = 1;
 	int32 logLevel = 2;
 	sfixed64 timestamp = 3;
-	bytes jsonData = 4; 
+	repeated Attribute attributes = 4;
+	optional string messageFormat = 5;
+	message string = 6;
+	LineType lineType = 7;
+	optional AttributeCommon lineAttribute = 8;
 }
 
 message Span {
-	bytes SpanID = 3;
-	bytes ParentID = 4;
-	bytes jsonData = 5;
+	bytes spanID = 3;
+	bytes parentID = 4;
+	repeated SpanAttribute attributes = 5;
 	sfixed64 startTime = 6;
 	optional sfixed64 endTime = 7;
 	optional bytes baggage = 8; // only populated if isRequest is true and there is data
 	optional bytes traceState = 9; // only populated if isRequest is true and there is data
 	int32 version = 10;
 	bool isRequest = 11;
+}
+
+message SpanAttribute {
+	AttributeDefinitionSequenceNumber int = 1;
+	AttributeCommon attributeCommon = 2;
+}
+
+message Attribute {
+	string key = 1;
+	AttributeCommon attributeCommon = 2;
+}
+
+message AttributeCommon {
+	AttributeType type = 1;
+	optional string stringValue = 2;
+	optional sint64 intValue = 3; 
+	optional uint64 uintValue = 4;
+	optional double floatValue = 5;
+	optional bytes bytesValue = 6;
 }
 
 message AttributeDefinition {
@@ -84,10 +75,16 @@ message AttributeDefinition {
 	bool multiple = 10;
 }
 
+enum LineType {
+	Line = 0;
+	Model = 1;
+	Link = 2;
+}
+
 // comes from ZZZAttribute
 enum AttributeType {
 	Unknown = 0;
-	Bool = 1;
+	Bool = 1; // value is in intValue, 0 = false, 1 = true
 	Float64 = 2;
 	Float32 = 3;
 	Int64 = 4;
@@ -96,11 +93,18 @@ enum AttributeType {
 	Int8 = 7;
 	Int = 8;
 	String = 9;
-	Link = 10;
-	Any = 11;
-	Time = 12;
-	Duration = 13;
-	Enum = 14;
+	Link = 10; // value is in stringValue
+	Any = 11; // value is in bytesValue, JSON encoded, type is in stringValue
+	Time = 12; // value is in intValue, UnixNano.
+	Duration = 13; // value is in intValue, nanoseconds
+	Enum = 14; // int is in intValue, string is in stringValue
+	// These are not included in ZZZAttribute, but are included in line attributes (AllData)
+	Uint64 = 100;
+	Uint32 = 101;
+	Uint16 = 102;
+	Uint8 = 103;
+	Uint = 104;
+	Stringer = 105; // value is in stringValue
 }
 
 message EnumDefinition {
@@ -109,21 +113,4 @@ message EnumDefinition {
 	string namespaceSemver = 3;
 	string string = 4;
 	int64 intValue = 5;
-}
-
-*/
-
-message Error {
-	string text = 1;
-}
-
-message ReadyToStream {
-	fixed64 streamID = 1;
-}
-
-message Empty {}
-
-service Ingest {
-	rpc Ping(Empty) returns (Empty) {}
-	rpc UploadFragment(IngestFragment) returns (Error) {}
 }
