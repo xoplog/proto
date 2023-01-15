@@ -12,8 +12,8 @@ message Source {
 	string sourceID = 3;
 	int64 sourceStartTime = 4;
 	bytes sourceRandom = 5;
-	uint32 protoVersion = 6; // always 1 for now and guaranteed never > 255
-	bool canThrottle = 7; // true for aggregators that have local storage
+	bool canThrottle = 6; // true for aggregators that have local storage
+	int32 protoVersion = 7;
 }
 
 enum Encoding {
@@ -47,6 +47,7 @@ message Request {
 	int32 errorCount = 7;
 	int32 alertCount = 8;
 	sfixed64 startTime = 9; // duplicates in in the request span
+	sfixed64 endTime = 10; // duplicates in in the request span XXX ADD!
 }
 
 message Line {
