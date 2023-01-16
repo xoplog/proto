@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+package xop;
+
 option go_package = "github.com/xoplog/xop-go/xopproto";
 
 message Trace {
@@ -26,8 +28,8 @@ message Line {
 	sfixed64 timestamp = 3;
 	repeated Attribute attributes = 4;
 	optional string messageFormat = 5;
-	message string = 6;
-	LineType lineType = 7;
+	string message = 6;
+	LineKind lineType = 7;
 	optional AttributeCommon lineAttribute = 8;
 }
 
@@ -44,7 +46,7 @@ message Span {
 }
 
 message SpanAttribute {
-	AttributeDefinitionSequenceNumber int = 1;
+	uint32 attributeDefinitionSequenceNumber = 1;
 	AttributeCommon attributeCommon = 2;
 }
 
@@ -75,10 +77,10 @@ message AttributeDefinition {
 	bool multiple = 10;
 }
 
-enum LineType {
-	Line = 0;
-	Model = 1;
-	Link = 2;
+enum LineKind {
+	KindLine = 0;
+	KindModel = 1;
+	KindLink = 2;
 }
 
 // comes from ZZZAttribute
@@ -113,4 +115,50 @@ message EnumDefinition {
 	string namespaceSemver = 3;
 	string string = 4;
 	int64 intValue = 5;
+}
+
+// Within a sourceNamespace+sourceVersion, all attributes of the same name
+// must have the same defintions.
+
+message Source {
+	string sourceNamespace = 1;
+	string sourceNamespaceVersion = 2;
+	string sourceID = 3;
+	int64 sourceStartTime = 4;
+	bytes sourceRandom = 5;
+	bool canThrottle = 6; // true for aggregators that have local storage
+	int32 protoVersion = 7;
+}
+
+enum Encoding {
+	UnknownEncoding = 0;
+	JSONInProto = 1;
+	Proto = 2;
+}
+
+message IngestFragment {
+	Source source = 1;
+	Encoding encoding = 2;
+	uint32 endodingVersion = 3;
+	uint32 sequenceNumber = 4;
+	repeated Trace traces = 5;
+	int64 receivedAt = 6;
+	repeated AttributeDefinition attributeDefinitions = 7;
+	repeated EnumDefinition enumDefinitions = 8;
+}
+
+
+message Error {
+	string text = 1;
+}
+
+message ReadyToStream {
+	fixed64 streamID = 1;
+}
+
+message Empty {}
+
+service Ingest {
+	rpc Ping(Empty) returns (Empty) {}
+	rpc UploadFragment(IngestFragment) returns (Error) {}
 }
