@@ -4,6 +4,23 @@ package xop;
 
 option go_package = "github.com/xoplog/xop-go/xopproto";
 
+message Sender {
+	int64 senderStartTime = 5;
+	bytes senderRandom = 6;
+	bool canThrottle = 7; // true for aggregators that have local storage
+	int32 protoVersion = 8;
+}
+
+message IngestFragment {
+	Sender sender = 1;
+	Encoding encoding = 2;
+	uint32 endodingVersion = 3;
+	uint32 sequenceNumber = 4;
+	repeated Trace traces = 5;
+	int64 receivedAt = 6;
+	// XXX repeated EnumDefinition enumDefinitions = 8;
+}
+
 message Trace {
 	bytes TraceID = 1;
 	repeated Request requests = 2;
@@ -12,14 +29,30 @@ message Trace {
 message Request {
 	bytes requestID = 1;
 	optional bytes parentTraceID = 2;
-	bytes parentSpanID = 3;
-	int32 priorLinesInRequest = 4;
-	repeated Span spans = 5; 
-	repeated Line lines = 6; // not included in spans because we want to preserve the exact ordering
-	int32 errorCount = 7;
-	int32 alertCount = 8;
-	sfixed64 startTime = 9; // duplicates in in the request span
-	sfixed64 endTime = 10; // duplicates in in the request span XXX ADD!
+	int32 priorLinesInRequest = 3;
+	repeated Span spans = 4; // first span is always the request span
+	repeated Line lines = 5; // not included in spans because we want to preserve the exact ordering
+	int32 errorCount = 6;
+	int32 alertCount = 7;
+	string sourceNamespace = 8;
+	string sourceNamespaceVersion = 9;
+	string sourceID = 10;
+	string sourceVersion = 11;
+	repeated AttributeDefinition attributeDefinitions = 12; // always includes full set, even if request is sent multiple times // XXX fill
+}
+
+message Span {
+	bytes spanID = 3;
+	bytes parentID = 4;
+	repeated SpanAttribute attributes = 5;
+	sfixed64 startTime = 6;
+	optional sfixed64 endTime = 7;
+	string baggage = 8; // only populated if isRequest is true and there is data
+	string traceState = 9; // only populated if isRequest is true and there is data
+	int32 version = 10;
+	bool isRequest = 11; // somewhat redundant
+	string name = 12;
+	string sequenceCode = 13;
 }
 
 message Line {
@@ -29,39 +62,36 @@ message Line {
 	repeated Attribute attributes = 4;
 	optional string messageFormat = 5;
 	string message = 6;
-	LineKind lineType = 7;
-	optional AttributeCommon lineAttribute = 8;
+	string messageTemplate = 7;
+	LineKind lineKind = 8;
+	string link = 9; // custom type?
+	optional Model model = 10;
 }
 
-message Span {
-	bytes spanID = 3;
-	bytes parentID = 4;
-	repeated SpanAttribute attributes = 5;
-	sfixed64 startTime = 6;
-	optional sfixed64 endTime = 7;
-	optional bytes baggage = 8; // only populated if isRequest is true and there is data
-	optional bytes traceState = 9; // only populated if isRequest is true and there is data
-	int32 version = 10;
-	bool isRequest = 11;
+message Model {
+	string type = 1;
+	bytes json = 2;
+	string error = 3;
 }
+
 
 message SpanAttribute {
 	uint32 attributeDefinitionSequenceNumber = 1;
-	AttributeCommon attributeCommon = 2;
+	repeated AttributeValue values = 2; // at least one is required
 }
 
 message Attribute {
 	string key = 1;
-	AttributeCommon attributeCommon = 2;
+	AttributeType type = 2;
+	AttributeValue value = 3;
 }
 
-message AttributeCommon {
-	AttributeType type = 1;
-	optional string stringValue = 2;
-	optional sint64 intValue = 3; 
-	optional uint64 uintValue = 4;
-	optional double floatValue = 5;
-	optional bytes bytesValue = 6;
+message AttributeValue {
+	string stringValue = 2;
+	sint64 intValue = 3; 
+	uint64 uintValue = 4;
+	double floatValue = 5;
+	bytes bytesValue = 6;
 }
 
 message AttributeDefinition {
@@ -106,7 +136,8 @@ enum AttributeType {
 	Uint16 = 102;
 	Uint8 = 103;
 	Uint = 104;
-	Stringer = 105; // value is in stringValue
+	Uintptr = 105;
+	Stringer = 106; // value is in stringValue
 }
 
 message EnumDefinition {
@@ -120,33 +151,11 @@ message EnumDefinition {
 // Within a sourceNamespace+sourceVersion, all attributes of the same name
 // must have the same defintions.
 
-message Source {
-	string sourceNamespace = 1;
-	string sourceNamespaceVersion = 2;
-	string sourceID = 3;
-	int64 sourceStartTime = 4;
-	bytes sourceRandom = 5;
-	bool canThrottle = 6; // true for aggregators that have local storage
-	int32 protoVersion = 7;
-}
-
 enum Encoding {
 	UnknownEncoding = 0;
 	JSONInProto = 1;
 	Proto = 2;
 }
-
-message IngestFragment {
-	Source source = 1;
-	Encoding encoding = 2;
-	uint32 endodingVersion = 3;
-	uint32 sequenceNumber = 4;
-	repeated Trace traces = 5;
-	int64 receivedAt = 6;
-	repeated AttributeDefinition attributeDefinitions = 7;
-	repeated EnumDefinition enumDefinitions = 8;
-}
-
 
 message Error {
 	string text = 1;
