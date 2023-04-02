@@ -1,0 +1,210 @@
+syntax = "proto3";
+
+package xop;
+
+option go_package = "github.com/xoplog/xop-go/xopproto";
+
+message Sender {
+	int64 senderStartTime = 5;
+	bytes senderRandom = 6;
+	bool canThrottle = 7; // true for aggregators that have local storage
+	int32 protoVersion = 8;
+}
+
+message IngestFragment {
+	Sender sender = 1;
+	LogFormat encoding = 2;
+	uint32 endodingVersion = 3;
+	uint32 sequenceNumber = 4;
+	repeated Trace traces = 5;
+	int64 receivedAt = 6;
+}
+
+message Trace {
+	bytes TraceID = 1;
+	repeated Request requests = 2;
+}
+
+message Request {
+	Span span = 1;
+	optional bytes parentTraceID = 2;
+	int32 priorLinesInRequest = 3;
+	repeated Line lines = 4; // not included in spans because we want to preserve the exact ordering
+	int32 errorCount = 5;
+	int32 alertCount = 6;
+	string sourceNamespace = 7;
+	string sourceNamespaceVersion = 8;
+	string sourceID = 9;
+	string sourceVersion = 10;
+	repeated AttributeDefinition attributeDefinitions = 11; // always includes full set, even if request is sent multiple times 
+	string baggage = 12; 
+	string traceState = 13; 
+}
+
+message Span {
+	bytes spanID = 1;
+	bytes parentID = 2;
+	repeated SpanAttribute attributes = 3;
+	sfixed64 startTime = 5;
+	optional sfixed64 endTime = 6;
+	int32 version = 7;
+	bool isRequest = 8; // somewhat redundant
+	string name = 9;
+	string sequenceCode = 10;
+	repeated Span spans = 11;
+}
+
+message Line {
+	bytes spanID = 1;
+	int32 logLevel = 2;
+	sfixed64 timestamp = 3;
+	repeated Attribute attributes = 4;
+	string message = 5;
+	string messageTemplate = 6;
+	LineKind lineKind = 7;
+	string link = 8; // custom type?
+	optional Model model = 9;
+	repeated StackFrame stackFrames = 10;
+}
+
+message StackFrame {
+	string file = 1;
+	int32 lineNumber = 2;
+}
+
+message Model {
+	string type = 1;
+	bytes encoded = 2;
+	Encoding encoding = 3;
+}
+
+message SpanAttribute {
+	uint32 attributeDefinitionSequenceNumber = 1;
+	repeated AttributeValue values = 2; // at least one is required
+}
+
+message Attribute {
+	string key = 1;
+	AttributeType type = 2;
+	AttributeValue value = 3;
+}
+
+message AttributeValue {
+	string stringValue = 1;
+	sint64 intValue = 2; 
+	double floatValue = 3;
+	bytes bytesValue = 4;
+	uint64 uintValue = 5; 
+}
+
+message AttributeDefinition {
+	string key = 1;
+	string description = 2;
+	string namespace = 3;
+	string namespaceSemver = 4;
+	AttributeType type = 5;
+	bool shouldIndex = 6;
+	int32 prominence = 7;
+	bool locked = 8;
+	bool distinct = 9;
+	bool multiple = 10;
+	bool ranged = 11;
+}
+
+enum LineKind {
+	KindLine = 0;
+	KindModel = 1;
+	KindLink = 2;
+}
+
+enum Encoding {
+	Unset = 0; // will default to JSON
+	JSON = 1;
+	XML = 2;
+	CSV = 3; // model must implement a Table interface
+	ErrorMessage = 4; // encoding failed and the encoded value is an error message
+}
+
+// comes from ZZZAttribute
+enum AttributeType {
+	Unknown = 0;
+	Bool = 1; // value is in intValue, 0 = false, 1 = true
+	Float64 = 2;
+	Float32 = 3;
+	Int64 = 4;
+	Int32 = 5;
+	Int16 = 6;
+	Int8 = 7;
+	Int = 8;
+	String = 9;
+	Link = 10; // value is in stringValue
+	Any = 11; // value is in bytesValue, JSON encoded, type is in stringValue
+	Time = 12; // value is in intValue, UnixNano.
+	Duration = 13; // value is in intValue, nanoseconds
+	Enum = 14; // int is in intValue, string is in stringValue
+	// These are not included in ZZZAttribute, but are included in line attributes (AllData)
+	Uint64 = 100;
+	Uint32 = 101;
+	Uint16 = 102;
+	Uint8 = 103;
+	Uint = 104;
+	Uintptr = 105;
+	Stringer = 106; // value is in stringValue
+	Error = 107; // value is in stringValue
+	// Array types are not part of ZZZAttribute or AllData
+	ArrayBool = 201; // value is in intValue, 0 = false, 1 = true
+	ArrayFloat64 = 202;
+	ArrayFloat32 = 203;
+	ArrayInt64 = 204;
+	ArrayInt32 = 205;
+	ArrayInt16 = 206;
+	ArrayInt8 = 207;
+	ArrayInt = 208;
+	ArrayString = 209;
+	ArrayLink = 210; 
+	ArrayAny = 211; 
+	ArrayTime = 212; 
+	ArrayDuration = 213; 
+	ArrayEnum = 214; 
+	// These are not included in ZZZAttribute, but are included in line attributes (AllData)
+	ArrayUint64 = 300;
+	ArrayUint32 = 301;
+	ArrayUint16 = 302;
+	ArrayUint8 = 303;
+	ArrayUint = 304;
+	ArrayUintptr = 305;
+	ArrayStringer = 306; 
+	ArrayError = 307; 
+}
+
+message EnumDefinition {
+	string attributeKey = 1;
+	string namespace = 2;
+	string namespaceSemver = 3;
+	string string = 4;
+	int64 intValue = 5;
+}
+
+// Within a sourceNamespace+sourceVersion, all attributes of the same name
+// must have the same defintions.
+
+enum LogFormat {
+	UnknownEncoding = 0;
+	JSONInProto = 1;
+	Proto = 2;
+}
+
+message ErrorResponse {
+	string text = 1;
+}
+
+message ReadyToStream {
+	fixed64 streamID = 1;
+}
+
+message Empty {}
+
+service Ingest {
+	rpc Ping(Empty) returns (Empty) {}
+	rpc UploadFragment(IngestFragment) returns (ErrorResponse) {}
+}
