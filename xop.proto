@@ -123,6 +123,7 @@ enum Encoding {
 	XML = 2;
 	CSV = 3; // model must implement a Table interface
 	ErrorMessage = 4; // encoding failed and the encoded value is an error message
+	OneLineCSV = 5; // CSV doubly-encoded as a single quoted string, no newlines
 }
 
 // comes from ZZZAttribute
